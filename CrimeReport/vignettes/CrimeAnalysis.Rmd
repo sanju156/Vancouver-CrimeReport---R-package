@@ -1,0 +1,552 @@
+---
+title: "CrimeReport-Vancouver"
+author: "Sanju Shree Suresh Kumar"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{CrimeReport-Vancouver}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Motivation
+
+Crime data analysis plays a crucial role in understanding and addressing public safety concerns within a city. By analyzing crime data, law enforcement agencies, policymakers, and researchers can gain insights into patterns, trends, and hotspots of criminal activity. This series of vignettes aims to provide a comprehensive overview of crime data analysis using R, offering techniques to uncover meaningful information from raw crime datasets. Through a step-by-step approach, we explore various aspects of crime analysis, from temporal trends and neighborhood-specific analyses to hourly patterns of criminal incidents. By highlighting the significance of such analyses, we empower stakeholders with actionable insights to devise effective strategies for crime prevention, resource allocation, and improved public safety. As we delve into each analysis, we will uncover valuable insights that contribute to safer and more secure communities.
+
+## Introduction
+
+This vignette introduces the usage of the CrimeReport package to analyze crime data in Vancouver. The code in this vignette demonstrates how to load the crime dataset and perform basic data exploration.
+
+```{r setup}
+library(CrimeReport)
+```
+
+## Loading Vancouver Crime Data
+
+The following code snippet defines a function load_vancouver_crime_data() which reads the crime dataset from the package's extdata directory. This dataset contains information about crime incidents in Vancouver.
+
+```{r}
+load_vancouver_crime_data <- function() {
+  # Use system.file to locate the CSV file
+  data_path <- system.file("extdata", "crime.csv", package = "CrimeReport")
+  crime_data <- readr::read_csv(data_path)
+  return(crime_data)
+}
+```
+
+### Exploring the Crime Dataset
+
+In this section, we load the crime dataset using the load_vancouver_crime_data() function and perform some basic data exploration.
+
+```{r}
+crime_data <- load_vancouver_crime_data()
+```
+
+Display the first few rows of the crime dataset to get an overview of the available columns and data entries.
+
+```{r}
+print(head(crime_data))
+```
+
+Calculate the number of rows and columns in the dataset and print the results.
+
+```{r}
+num_rows <- nrow(crime_data)
+num_cols <- ncol(crime_data)
+cat("Number of rows:", num_rows, "\n")
+cat("Number of columns:", num_cols, "\n")
+```
+
+This section of the vignette illustrates the process of loading the Vancouver crime dataset using the load_vancouver_crime_data() function and conducting basic data exploration tasks.
+
+# Analyzing Temporal Trends in Crime Incidents
+
+This vignette demonstrates the process of analyzing temporal trends in crime incidents using the analyze_temporal_trends function from the CrimeReport package. The code provided below utilizes data manipulation, visualization, and summary statistics to uncover insights about crime trends over different years and months.
+
+## Analyzing Yearly Trends
+
+In this section, we examine the yearly trends in crime incidents. The analyze_temporal_trends function aggregates crime data by year and creates a bar plot displaying the distribution of incidents for each year.
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+analyze_temporal_trends <- function(crime_data) {
+	# Yearly trends
+	year_counts <- crime_data %>%
+		group_by(YEAR) %>%
+		summarize(count = n())
+
+	year_plot <- ggplot(year_counts, aes(x = YEAR, y = count, fill = factor(YEAR))) +
+		geom_bar(stat = "identity", color = "black", alpha = 0.7) +
+		labs(x = "Year", y = "Number of Incidents", title = "Yearly Trends in Crime Incidents") +
+		scale_x_continuous(breaks = year_counts$YEAR, labels = year_counts$YEAR, expand = c(0, 0)) +
+		theme_minimal() +
+		theme(legend.position = "none")  # Remove the legend
+
+	# Calculate summary statistics for years
+	min_crimes <- min(year_counts$count)
+	max_crimes <- max(year_counts$count)
+	median_crimes <- median(year_counts$count)
+
+	# Create text results for the yearly trend
+	text_results <- paste(
+		"Summary Statistics for Yearly Trend:",
+		"Minimum number of crimes in a year:",
+		paste("  - Year:", year_counts$YEAR[which(year_counts$count == min_crimes)], "Count:", min_crimes),
+		"Maximum number of crimes in a year:",
+		paste("  - Year:", year_counts$YEAR[which(year_counts$count == max_crimes)], "Count:", max_crimes),
+		"Median number of crimes in a year:",
+		paste("  - Year:", year_counts$YEAR[which(year_counts$count == median_crimes)], "Count:", median_crimes)
+	)
+
+	# Monthly trends for specific years (2003, 2015, 2017)
+	specific_years <- c(2003, 2015, 2017)
+	specific_year_month_results <- lapply(specific_years, function(year) {
+		year_month_counts <- crime_data %>%
+			filter(YEAR == year) %>%
+			group_by(MONTH) %>%
+			summarize(count = n())
+
+		month_plot <- ggplot(year_month_counts, aes(x = MONTH, y = count)) +
+			geom_line(color = "blue") +
+			labs(x = "Month", y = "Number of Incidents", title = paste("Monthly Trends in Crime Incidents for Year", year)) +
+			scale_x_continuous(breaks = 1:12, labels = month.abb, expand = c(0, 0)) +
+			theme_minimal() +
+			theme(legend.position = "none")
+
+		# Calculate summary statistics for specific year and month
+		min_month_crimes <- min(year_month_counts$count)
+		max_month_crimes <- max(year_month_counts$count)
+		median_month_crimes <- median(year_month_counts$count)
+
+		# Create text results for specific year and month
+		month_text_results <- paste(
+			"Summary Statistics for Monthly Trend in Year", year,
+			"Minimum number of crimes in a month:",
+			paste("  - Month:", month.abb[which(year_month_counts$count == min_month_crimes)], "Count:", min_month_crimes),
+			"Maximum number of crimes in a month:",
+			paste("  - Month:", month.abb[which(year_month_counts$count == max_month_crimes)], "Count:", max_month_crimes),
+			"Median number of crimes in a month:",
+			paste("  - Month:", month.abb[which(year_month_counts$count == median_month_crimes)], "Count:", median_month_crimes)
+		)
+
+		list(
+			year = year,
+			month_plot = month_plot,
+			month_text_results = month_text_results
+		)
+	})
+
+	list(
+		year_plot = year_plot,
+		text_results = text_results,
+		specific_year_month_results = specific_year_month_results
+	)
+}
+```
+
+## Analyzing Monthly Trends
+
+Next, we focus on analyzing the monthly trends in crime incidents for specific years (2003, 2015, and 2017). The function generates line plots illustrating the monthly distribution of incidents for each selected year.
+
+### Visualizing Yearly Trends
+
+The code snippet below generates a bar plot illustrating the yearly trends in crime incidents. Each bar represents a year, and the height of the bar corresponds to the number of incidents. The plot is customized with minimal styling and legend removal for clarity.
+
+### Visualizing Monthly Trends
+The code snippet below generates line plots illustrating the monthly trends in crime incidents for the specific years (2003, 2015, and 2017). Each line represents a year, and the x-axis represents the months. The plot is customized with blue lines for clarity.
+
+```{r,fig.height=6,fig.width=8}
+# Analyze temporal trends
+temporal_trends <- analyze_temporal_trends(crime_data)
+
+# Print text results for the yearly trend plot
+cat(temporal_trends$text_results, "\n")
+
+# Print the yearly trend plot
+print("Yearly Trend Plot:")
+print("This plot displays the trend of crime incidents over the years.")
+print(temporal_trends$year_plot)
+
+# Print text results and plots for specific year and month trends
+for (i in seq_along(temporal_trends$specific_year_month_results)) {
+	cat(temporal_trends$specific_year_month_results[[i]]$month_text_results, "\n")
+	print(temporal_trends$specific_year_month_results[[i]]$month_plot)
+}
+```
+
+## Results Yearly Trends
+
+- **2017** had the least crime incidents with **17857** cases.
+- **2003** observed the highest crime incidents with **49928** cases.
+- The median occurred in **2015** with **34328** cases.
+
+For month results code will show you the overall summary for the Monthly Trends.
+
+# Finding Highest Theft Type by Year and Month
+
+This code presents the `find_highest_theft_type` function, which is designed to identify the most prevalent theft type for specific years and maximum months within a given dataset.
+
+## Function Overview
+
+The `find_highest_theft_type` function takes three main parameters: `theft_data`, a dataset containing theft information; `years`, a numeric vector indicating the years to analyze; and `max_months`, a character vector specifying the maximum months of each year to consider. The function iterates over the provided years and months, filters the dataset based on the criteria, and determines the theft type with the highest occurrence count.
+
+```{r}
+find_highest_theft_type <- function(theft_data, years, max_months) {
+  results <- list()
+  
+  for (i in seq_along(years)) {
+    year <- years[i]
+    month <- max_months[i]
+    
+    # Filter data for the specified year and month
+    filtered_data <- theft_data %>%
+      dplyr::filter(YEAR == year, MONTH == match(month, month.abb))
+    
+    # Find the theft type with the highest count
+    highest_theft_type <- filtered_data %>%
+      dplyr::group_by(TYPE) %>%
+      dplyr::summarize(count = n()) %>%
+      dplyr::arrange(desc(count)) %>%
+      dplyr::slice(1)
+    
+    results[[paste(year, month, sep = "_")]] <- highest_theft_type
+  }
+  
+  return(results)
+}
+
+```
+
+### Print the results
+
+```{r}
+theft_data <- load_vancouver_crime_data()
+years <- c(2003, 2015, 2017)
+max_months <- c("May", "Nov", "May")
+
+highest_theft_types <- find_highest_theft_type(theft_data, years, max_months)
+
+
+# Print the highest theft types for each year and month
+for (key in names(highest_theft_types)) {
+  year_month <- key
+  highest_type <- highest_theft_types[[key]]$TYPE
+  count <- highest_theft_types[[key]]$count
+  
+  cat("Year and Month:", year_month, "\n")
+  cat("Highest Theft Type:", highest_type, "\n")
+  cat("Count:", count, "\n\n")
+}
+```
+
+The analysis reveals that "Theft from Vehicle" was the most frequent theft type during specific periods:
+
+In May 2003, there were 1873 incidents.
+In November 2015, there were 1215 incidents.
+In May 2017, there were 980 incidents.
+The consistent prevalence of "Theft from Vehicle" indicates a recurring pattern of this type of theft during those months.
+
+
+# Finding Least Theft Type by Year and Month
+
+The function find_least_theft_type identifies the least frequent theft type during specific periods. It analyzes the crime data to pinpoint the theft type with the lowest occurrence. 
+
+```{r}
+find_least_theft_type <- function(theft_data, years, max_months) {
+  results <- list()
+
+  for (i in seq_along(years)) {
+    year <- years[i]
+    month <- max_months[i]
+
+    # Filter data for the specified year and month
+    filtered_data <- theft_data %>%
+      dplyr::filter(YEAR == year, MONTH == match(month, month.abb))
+
+    # Find the theft type with the least count
+    least_theft_type <- filtered_data %>%
+      dplyr::group_by(TYPE) %>%
+      dplyr::summarize(count = n()) %>%
+      dplyr::arrange(count) %>%
+      dplyr::slice(1)
+
+    results[[paste(year, month, sep = "_")]] <- least_theft_type
+  }
+
+  return(results)
+}
+
+```
+
+By running the function with specified years and months, the analysis uncovers the type of theft that was least common during those periods. The results highlight the crime type with its corresponding count, offering valuable insights into crime trends.
+
+### Print the results
+
+```{r}
+years <- c(2003, 2015, 2017)
+max_months <- c("May", "Nov", "May")
+
+least_theft_types <- find_least_theft_type(theft_data, years, max_months)
+
+# Print the least theft types for each year and month
+for (key in names(least_theft_types)) {
+  year_month <- key
+  least_type <- least_theft_types[[key]]$TYPE
+  count <- least_theft_types[[key]]$count
+  
+  cat("Year and Month:", year_month, "\n")
+  cat("Least Theft Type:", least_type, "\n")
+  cat("Count:", count, "\n\n")
+}
+```
+
+The analysis reveals that "Homicide" was the least frequent theft type in the specified years and months, with counts ranging from 1 to 2 incidents.
+
+# Neighborhood Analysis
+
+This vignette demonstrates an analysis of neighborhood crime data using the neighborhood_analysis function from the CrimeReport package. The function identifies neighborhoods with the highest total crime incidents and provides a summary of their crime rates.
+
+The neighborhood_analysis function allows you to perform an analysis of crime incidents by neighborhood.
+
+```{r}
+neighborhood_analysis <- function(crime_data, top_n = 5) {
+  # Load the required package
+  library(dplyr)
+  
+  neighborhood_summary <- crime_data %>%
+    group_by(NEIGHBOURHOOD) %>%
+    summarize(total_crimes = n()) %>%
+    arrange(desc(total_crimes))
+  
+  top_neighborhoods <- head(neighborhood_summary, n = top_n)
+  
+  return(list(
+    neighborhood_summary = neighborhood_summary,
+    top_neighborhoods = top_neighborhoods
+  ))
+}
+```
+
+## Top 5 Neighborhoods with High Crime Rates and Summary 
+
+The neighborhood crime analysis provides insights into the distribution of crime incidents across neighborhoods, helping to identify areas with high crime rates. This information can be valuable for crime prevention and law enforcement strategies.
+
+```{r}
+# Perform neighborhood analysis
+neighborhood_analysis_result <- neighborhood_analysis(crime_data, top_n = 5)
+
+# View the neighborhood summary
+print("Neighborhood Summary:")
+print(neighborhood_analysis_result$neighborhood_summary)
+
+# View the top neighborhoods with high crime rates
+print("Top Neighborhoods with High Crime Rates:")
+print(neighborhood_analysis_result$top_neighborhoods)
+```
+
+The analysis showcases the neighborhood summary of total crime incidents and highlights the top 5 neighborhoods with the highest crime rates.
+
+# Crime Count By Crime Type
+
+The following code snippet presents a function for calculating the total crime count by type in a specific neighborhood, year, and month. It then generates a set of bar plots, each depicting the total crime count by type in the specified neighborhood for different combinations of years and months. The plots are displayed individually.
+
+```{r}
+calculate_total_crime_count_by_type_neighborhood <- function(crime_data, neighborhood, year, month) {
+  crime_count <- crime_data %>%
+    filter(NEIGHBOURHOOD == neighborhood, YEAR == year, MONTH == month) %>%
+    group_by(TYPE) %>%
+    summarize(count = n())
+  
+  return(crime_count)
+}
+```
+
+### Visualizing the plots
+
+This code calculates and visualizes the total crime count by type in the specified neighborhood for different combinations of years and months using bar plots. The plots are presented individually, showcasing the variation in crime types across different time periods.
+
+```{r,fig.height=6,fig.width=8}
+# Load required packages
+library(ggplot2)
+  
+# Specify the neighborhood and months
+neighborhood <- "Central Business District"
+years <- c(2003, 2015, 2017)
+months <- c(5, 11, 5)
+
+# Create a list to store plots
+plots <- list()
+
+# Loop through each combination of year and month
+for (i in seq_along(years)) {
+  year <- years[i]
+  month <- months[i]
+  
+  # Calculate total crime count by type in the specified neighborhood, year, and month
+  crime_count_by_type <- calculate_total_crime_count_by_type_neighborhood(crime_data,
+                                                                           neighborhood,
+                                                                           year,
+                                                                           month)
+  
+  # Create a bar plot using ggplot2 for the current year and month
+  plot <- ggplot(crime_count_by_type, aes(x = reorder(TYPE, count), y = count, fill = TYPE)) +
+    geom_bar(stat = "identity") +
+    labs(x = NULL, y = "Total Crime Count",
+         title = paste("Total Crime Count by Type in", neighborhood, "for", month, "/", year)) +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+  
+  plots[[paste(year, month, sep = "_")]] <- plot
+}
+
+# Display the plots
+for (plot in plots) {
+  print(plot)
+}
+```
+
+From the Neighbourhood Analysis we found that high crime happened in the Central Business District so plotted for same.
+
+# Analyzing Crime Incidents by Hour and Type
+
+This vignette demonstrates an analysis of crime incidents by hour and type. The code includes a function calculate_crime_count_by_hour_type that calculates crime counts by hour and type for specified years and months. It also provides visualizations in the form of heatmaps, displaying the distribution of crime incidents based on hour and type for different year and month combinations.
+
+## Functions
+
+###calculate_crime_count_by_hour_type
+
+This function calculates crime counts by hour and type using the provided crime data. It takes input parameters for years and months to filter the data, and returns a summary of crime counts by hour and type.
+
+```{r}
+calculate_crime_count_by_hour_type <- function(crime_data, years, months) {
+  crime_count <- crime_data %>%
+    filter(YEAR %in% years, MONTH %in% months) %>%
+    group_by(HOUR, TYPE) %>%
+    summarize(count = n())
+
+  return(crime_count)
+}
+```
+
+### Heatmap Visualizations
+
+The code also includes visualizations in the form of heatmaps. For each specified year and month combination, a heatmap is created using the ggplot2 package. Each cell in the heatmap represents the count of crime incidents for a specific hour and crime type.
+
+```{r,fig.height=6,fig.width=8}
+# Load required packages
+library(dplyr)
+library(ggplot2)
+
+
+# Specify the years and months
+years <- c(2003, 2015, 2017)
+months <- c(5, 11, 5)
+
+# Create and display separate heatmaps for each year and month combination
+for (i in seq_along(years)) {
+  year <- years[i]
+  month <- months[i]
+  
+  # Calculate crime count by hour and type for specific year and month
+  crime_count_by_hour_type <- calculate_crime_count_by_hour_type(crime_data, year, month)
+  
+  # Create a heatmap using ggplot2
+  heatmap_plot <- ggplot(crime_count_by_hour_type, aes(x = HOUR, y = TYPE, fill = count)) +
+    geom_tile() +
+    scale_fill_gradient(low = "white", high = "red") +
+    labs(x = "Hour", y = "Crime Type", title = paste("Crime Count by Hour and Type - Year", year, "Month", month)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  # Display the heatmap
+  print(heatmap_plot)
+}
+```
+
+The heatmaps provide a visual representation of the distribution of crime incidents based on hour and type for different time periods, enabling insights into temporal patterns of crime.
+
+# Analyzing Crime Incidents by Location and Hour of Day
+
+This vignette presents analyses of crime incidents based on location and hour of the day. The code includes two functions: analyze_location_analysis and analyze_hour_of_day_analysis. These functions allow for insights into crime patterns in specific locations and during different times of the day.
+
+## Function 1: analyze_location_analysis
+
+The analyze_location_analysis function takes crime data and a threshold value as input. It groups the data by hundred blocks, latitude, and longitude, calculating the total crime count. The function filters the results to identify areas with crime counts exceeding the specified threshold. The output provides a summary of locations with higher crime incidents.
+
+```{r}
+analyze_location_analysis <- function(crime_data, threshold) {
+  location_summary <- crime_data %>%
+    group_by(HUNDRED_BLOCK, Latitude, Longitude) %>%
+    summarize(Crime_Count = n()) %>%
+    filter(Crime_Count > threshold) %>%
+    arrange(desc(Crime_Count))
+
+  return(location_summary)
+}
+
+```
+
+## Analyzing High Crime Incidents by Location
+To analyze crime incidents based on location, use the analyze_location_analysis function. Specify a threshold value to identify areas with higher crime incidents. The resulting location summary provides insights into locations with relatively high crime counts.
+
+```{r}
+# Specify the threshold for identifying areas with higher crime incidents
+threshold <- 1000
+
+# Analyze crime incidents based on location
+location_summary <- analyze_location_analysis(crime_data, threshold)
+
+# Print the resulting location summary
+print(location_summary)
+```
+
+## Function 2: analyze_hour_of_day_analysis
+
+The analyze_hour_of_day_analysis function groups crime data by the hour of the day. It calculates the total crime count for each hour, providing insights into the distribution of crime incidents throughout the day.
+
+```{r}
+analyze_hour_of_day_analysis <- function(crime_data) {
+  hour_of_day_summary <- crime_data %>%
+    group_by(HOUR) %>%
+    summarize(Crime_Count = n())
+
+  return(hour_of_day_summary)
+}
+
+```
+
+## Analyzing Crime Incidents by Hour of Day
+
+To analyze crime incidents based on the hour of the day, use the analyze_hour_of_day_analysis function. The resulting hour-of-day summary provides a distribution of crime incidents across different hours.
+
+```{r,fig.height=6,fig.width=8}
+# Analyze crime incidents by hour of the day
+hour_of_day_summary <- analyze_hour_of_day_analysis(crime_data)
+
+# Create a bar plot for crime incidents by hour of the day
+hour_plot <- ggplot(hour_of_day_summary, aes(x = HOUR, y = Crime_Count)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Hour of the Day", y = "Crime Count", title = "Crime Incidents by Hour of the Day")
+
+# Display the plot
+print(hour_plot)
+hour_of_day_summary <- analyze_hour_of_day_analysis(crime_data)
+
+top_hours <- head(hour_of_day_summary[order(hour_of_day_summary$Crime_Count, decreasing = TRUE), ], 5)
+print(top_hours)
+
+```
+
+The analysis reveals that the time periods with the highest reported crime counts are associated with missing hour values, followed by the evening hours of 18:00 to 19:00, indicating potential focal points for law enforcement attention and resource allocation.
+
+# Conclusion
+
+In this series of vignettes, we explored various aspects of crime data analysis using R. We began by investigating temporal trends in crime incidents over different years and months, revealing fluctuations in crime rates and identifying patterns in specific time periods. We then delved into neighborhood-specific analyses, pinpointing areas with the highest and lowest crime rates, shedding light on geographical variations. Further, we examined crime incidents across hours of the day, utilizing heatmaps to visualize the distribution of crime types over different times. These analyses collectively provide valuable insights into crime patterns, aiding law enforcement agencies and policymakers in making informed decisions to enhance public safety.
